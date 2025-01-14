@@ -1,0 +1,52 @@
+name: Deploy Azure VM with Terraform
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  Terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+        run: |
+          terraform init -backend-config="storage_account_name=terraform00786" \
+                         -backend-config="container_name=terraform-state" \
+                         -backend-config="key=terraform.tfstate" \
+                         -backend-config="access_key=${{ secrets.AZURE_STORAGE_KEY }}"
+
+      - name: Terraform Plan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        run: |
+          terraform plan -out=tfplan \
+            -var="client_id=${{ secrets.ARM_CLIENT_ID }}" \
+            -var="client_secret=${{ secrets.ARM_CLIENT_SECRET }}" \
+            -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
+            -var="tenant_id=${{ secrets.ARM_TENANT_ID }}"
+
+      - name: Terraform Apply
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        run: terraform apply -auto-approve tfplan

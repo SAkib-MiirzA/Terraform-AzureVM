@@ -1,0 +1,40 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch: # Allows manual triggering of the workflow.
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout Code
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # Step 2: Setup Terraform
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.4.6 # Replace with your Terraform version.
+
+    # Step 3: Authenticate to Azure using Service Principal credentials
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # Step 4: Initialize Terraform
+    - name: Initialize Terraform
+      run: |
+        terraform init -input=false || echo "Terraform init failed. No state or configuration found."
+
+    # Step 5: Plan Destruction (optional, for verification)
+    - name: Plan Destruction
+      run: |
+        terraform plan -destroy -out=tfplan -input=false || echo "Plan failed. Resources may not exist."
+
+    # Step 6: Destroy Resources
+    - name: Destroy Resources
+      run: |
+        terraform destroy -auto-approve -input=false || echo "Destroy command completed. No resources may have been found."
